@@ -27,9 +27,39 @@ echo ""
 # Check Node.js
 echo -e "[1/6] Verificando Node.js..."
 if ! command -v node &> /dev/null; then
-    echo -e "  ${RED}❌ Node.js não encontrado!${NC}"
-    echo "  Por favor, instale o Node.js 18+ de: https://nodejs.org"
-    exit 1
+    echo -e "  ${YELLOW}⚠️  Node.js não encontrado!${NC}"
+    echo ""
+    read -p "  Deseja instalar o Node.js 20 automaticamente? (s/n): " INSTALL_NODE
+    if [[ "$INSTALL_NODE" =~ ^[Ss]$ ]]; then
+        echo "  Instalando Node.js 20..."
+        
+        # Detect package manager and install
+        if command -v apt-get &> /dev/null; then
+            # Debian/Ubuntu
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+        elif command -v dnf &> /dev/null; then
+            # Fedora/RHEL
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+            dnf install -y nodejs
+        elif command -v yum &> /dev/null; then
+            # CentOS/older RHEL
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+            yum install -y nodejs
+        else
+            echo -e "  ${RED}❌ Gerenciador de pacotes não suportado.${NC}"
+            echo "  Por favor, instale o Node.js 18+ manualmente de: https://nodejs.org"
+            exit 1
+        fi
+        
+        if ! command -v node &> /dev/null; then
+            echo -e "  ${RED}❌ Falha ao instalar Node.js${NC}"
+            exit 1
+        fi
+    else
+        echo "  Por favor, instale o Node.js 18+ de: https://nodejs.org"
+        exit 1
+    fi
 fi
 NODE_VERSION=$(node -v)
 echo -e "  ${GREEN}✅ Node.js encontrado: $NODE_VERSION${NC}"
