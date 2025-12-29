@@ -2,6 +2,7 @@
 
 # ============================================
 # AI Server Admin - Install Script
+# Instalação automática de todas as dependências
 # ============================================
 
 set -e
@@ -24,79 +25,177 @@ echo " 🖥️  AI SERVER ADMIN - INSTALAÇÃO"
 echo "===================================================="
 echo ""
 
-# Check Node.js
-echo -e "[1/6] Verificando Node.js..."
-if ! command -v node &> /dev/null; then
-    echo -e "  ${YELLOW}⚠️  Node.js não encontrado!${NC}"
-    echo ""
-    read -p "  Deseja instalar o Node.js 20 automaticamente? (s/n): " INSTALL_NODE
-    if [[ "$INSTALL_NODE" =~ ^[Ss]$ ]]; then
-        echo "  Instalando Node.js 20..."
-        
-        # Detect package manager and install
-        if command -v apt-get &> /dev/null; then
-            # Debian/Ubuntu
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs
-        elif command -v dnf &> /dev/null; then
-            # Fedora/RHEL
-            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-            dnf install -y nodejs
-        elif command -v yum &> /dev/null; then
-            # CentOS/older RHEL
-            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-            yum install -y nodejs
-        else
-            echo -e "  ${RED}❌ Gerenciador de pacotes não suportado.${NC}"
-            echo "  Por favor, instale o Node.js 18+ manualmente de: https://nodejs.org"
-            exit 1
-        fi
-        
-        if ! command -v node &> /dev/null; then
-            echo -e "  ${RED}❌ Falha ao instalar Node.js${NC}"
-            exit 1
-        fi
+# ============================================
+# Helper function to detect package manager
+# ============================================
+install_package() {
+    local package=$1
+    if command -v apt-get &> /dev/null; then
+        apt-get install -y $package
+    elif command -v dnf &> /dev/null; then
+        dnf install -y $package
+    elif command -v yum &> /dev/null; then
+        yum install -y $package
     else
-        echo "  Por favor, instale o Node.js 18+ de: https://nodejs.org"
+        echo -e "  ${RED}❌ Gerenciador de pacotes não suportado.${NC}"
+        return 1
+    fi
+}
+
+# ============================================
+# [0/7] Install prerequisites (curl, git)
+# ============================================
+echo -e "[0/7] Verificando pré-requisitos..."
+
+if ! command -v curl &> /dev/null; then
+    echo -e "  ${YELLOW}⚠️  curl não encontrado. Instalando...${NC}"
+    install_package curl
+fi
+
+if ! command -v git &> /dev/null; then
+    echo -e "  ${YELLOW}⚠️  git não encontrado. Instalando...${NC}"
+    install_package git
+fi
+
+echo -e "  ${GREEN}✅ Pré-requisitos OK${NC}"
+
+# ============================================
+# [1/7] Check/Install Node.js
+# ============================================
+echo ""
+echo -e "[1/7] Verificando Node.js..."
+if ! command -v node &> /dev/null; then
+    echo -e "  ${YELLOW}⚠️  Node.js não encontrado. Instalando Node.js 20...${NC}"
+    
+    if command -v apt-get &> /dev/null; then
+        # Debian/Ubuntu
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+    elif command -v dnf &> /dev/null; then
+        # Fedora/RHEL
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+        dnf install -y nodejs
+    elif command -v yum &> /dev/null; then
+        # CentOS/older RHEL
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+        yum install -y nodejs
+    else
+        echo -e "  ${RED}❌ Gerenciador de pacotes não suportado.${NC}"
+        echo "  Por favor, instale o Node.js 18+ manualmente de: https://nodejs.org"
+        exit 1
+    fi
+    
+    if ! command -v node &> /dev/null; then
+        echo -e "  ${RED}❌ Falha ao instalar Node.js${NC}"
         exit 1
     fi
 fi
 NODE_VERSION=$(node -v)
-echo -e "  ${GREEN}✅ Node.js encontrado: $NODE_VERSION${NC}"
+echo -e "  ${GREEN}✅ Node.js: $NODE_VERSION${NC}"
 
-# Check pnpm
+# ============================================
+# [2/7] Check/Install pnpm
+# ============================================
 echo ""
-echo -e "[2/6] Verificando pnpm..."
+echo -e "[2/7] Verificando pnpm..."
 if ! command -v pnpm &> /dev/null; then
     echo -e "  ${YELLOW}⚠️  pnpm não encontrado. Instalando...${NC}"
     npm install -g pnpm
 fi
 PNPM_VERSION=$(pnpm -v)
-echo -e "  ${GREEN}✅ pnpm encontrado: v$PNPM_VERSION${NC}"
+echo -e "  ${GREEN}✅ pnpm: v$PNPM_VERSION${NC}"
 
-# Check Docker
+# ============================================
+# [3/7] Check/Install Docker
+# ============================================
 echo ""
-echo -e "[3/6] Verificando Docker..."
+echo -e "[3/7] Verificando Docker..."
 if ! command -v docker &> /dev/null; then
-    echo -e "  ${RED}❌ Docker não encontrado!${NC}"
-    echo "  Por favor, instale o Docker de: https://docker.com"
-    exit 1
+    echo -e "  ${YELLOW}⚠️  Docker não encontrado. Instalando...${NC}"
+    
+    # Install Docker using official script
+    curl -fsSL https://get.docker.com | sh
+    
+    # Start Docker service
+    if command -v systemctl &> /dev/null; then
+        systemctl start docker
+        systemctl enable docker
+    fi
+    
+    if ! command -v docker &> /dev/null; then
+        echo -e "  ${RED}❌ Falha ao instalar Docker${NC}"
+        exit 1
+    fi
 fi
-if ! docker info &> /dev/null; then
-    echo -e "  ${YELLOW}⚠️  Docker não está rodando! Por favor, inicie o Docker.${NC}"
-    exit 1
-fi
-echo -e "  ${GREEN}✅ Docker encontrado e rodando${NC}"
 
-# Install dependencies
+# Check if Docker is running
+if ! docker info &> /dev/null 2>&1; then
+    echo -e "  ${YELLOW}⚠️  Docker não está rodando. Iniciando...${NC}"
+    if command -v systemctl &> /dev/null; then
+        systemctl start docker
+        sleep 3
+    fi
+    
+    if ! docker info &> /dev/null 2>&1; then
+        echo -e "  ${RED}❌ Não foi possível iniciar o Docker${NC}"
+        echo "  Tente executar: systemctl start docker"
+        exit 1
+    fi
+fi
+
+DOCKER_VERSION=$(docker --version | cut -d' ' -f3 | tr -d ',')
+echo -e "  ${GREEN}✅ Docker: v$DOCKER_VERSION${NC}"
+
+# ============================================
+# [4/7] Check/Install Docker Compose
+# ============================================
 echo ""
-echo -e "[4/6] Instalando dependências..."
+echo -e "[4/7] Verificando Docker Compose..."
+
+# Check for docker-compose or docker compose
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null 2>&1; then
+    echo -e "  ${YELLOW}⚠️  Docker Compose não encontrado. Instalando...${NC}"
+    
+    # Install Docker Compose plugin
+    if command -v apt-get &> /dev/null; then
+        apt-get install -y docker-compose-plugin
+    elif command -v dnf &> /dev/null; then
+        dnf install -y docker-compose-plugin
+    elif command -v yum &> /dev/null; then
+        yum install -y docker-compose-plugin
+    else
+        # Fallback: install standalone docker-compose
+        COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+        curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+    fi
+fi
+
+# Create alias function for docker-compose compatibility
+if command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+elif docker compose version &> /dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+else
+    echo -e "  ${RED}❌ Docker Compose não disponível${NC}"
+    exit 1
+fi
+
+echo -e "  ${GREEN}✅ Docker Compose disponível${NC}"
+
+# ============================================
+# [5/7] Install project dependencies
+# ============================================
+echo ""
+echo -e "[5/7] Instalando dependências do projeto..."
 pnpm install
 echo -e "  ${GREEN}✅ Dependências instaladas${NC}"
 
-# Configure .env
+# ============================================
+# [6/7] Configure environment
+# ============================================
 echo ""
-echo -e "[5/6] Configurando ambiente..."
+echo -e "[6/7] Configurando ambiente..."
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
@@ -110,11 +209,14 @@ else
     echo -e "  ${GREEN}✅ Arquivo .env já existe${NC}"
 fi
 
-# Start Docker containers
+# ============================================
+# [7/7] Start Docker containers and configure DB
+# ============================================
 echo ""
-echo -e "[6/6] Iniciando containers Docker..."
+echo -e "[7/7] Iniciando containers e configurando banco de dados..."
+
 cd docker
-docker-compose up -d
+$COMPOSE_CMD up -d
 cd ..
 echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
 
@@ -129,7 +231,9 @@ while ! docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; do
         exit 1
     fi
     sleep 1
+    echo -n "."
 done
+echo ""
 echo -e "  ${GREEN}✅ PostgreSQL pronto!${NC}"
 
 # Configure Prisma
@@ -139,10 +243,21 @@ pnpm db:generate || echo -e "  ${YELLOW}⚠️  Aviso: Falha ao gerar cliente Pr
 pnpm db:push || echo -e "  ${YELLOW}⚠️  Aviso: Falha ao sincronizar schema do banco${NC}"
 echo -e "  ${GREEN}✅ Banco de dados configurado${NC}"
 
+# ============================================
+# Summary
+# ============================================
 echo ""
 echo "===================================================="
 echo -e " ${GREEN}✅ INSTALAÇÃO CONCLUÍDA COM SUCESSO!${NC}"
 echo "===================================================="
+echo ""
+echo " Componentes instalados:"
+echo "   - Node.js: $NODE_VERSION"
+echo "   - pnpm: v$PNPM_VERSION"
+echo "   - Docker: v$DOCKER_VERSION"
+echo "   - Docker Compose"
+echo "   - PostgreSQL (container)"
+echo "   - Redis (container)"
 echo ""
 echo " Próximos passos:"
 echo "   1. Edite o arquivo .env com suas chaves de API"
