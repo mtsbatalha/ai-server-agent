@@ -239,6 +239,16 @@ echo -e "  ${GREEN}✅ PostgreSQL pronto!${NC}"
 # Configure Prisma
 echo ""
 echo "Configurando banco de dados..."
+
+# Load environment variables from .env file
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+    echo -e "  ${GREEN}✅ Variáveis de ambiente carregadas${NC}"
+fi
+
+# Run Prisma commands with loaded environment
 pnpm db:generate || echo -e "  ${YELLOW}⚠️  Aviso: Falha ao gerar cliente Prisma${NC}"
 pnpm db:push || echo -e "  ${YELLOW}⚠️  Aviso: Falha ao sincronizar schema do banco${NC}"
 echo -e "  ${GREEN}✅ Banco de dados configurado${NC}"
