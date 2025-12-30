@@ -15,11 +15,12 @@ COPY . .
 # Install all dependencies
 RUN pnpm install --frozen-lockfile || pnpm install
 
-# Generate Prisma Client from api directory where @prisma/client is installed
+# Generate Prisma Client
 WORKDIR /app/apps/api
-ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
-ENV PRISMA_GENERATE_SKIP_AUTOINSTALL=true
-RUN node_modules/.bin/prisma generate --schema=../../prisma/schema.prisma
+
+# Ensure @prisma/client is available and generate
+RUN npm install @prisma/client@5.22.0 prisma@5.22.0 --save-dev --legacy-peer-deps 2>/dev/null || true
+RUN ./node_modules/.bin/prisma generate --schema=../../prisma/schema.prisma
 
 # Build NestJS
 RUN pnpm build
