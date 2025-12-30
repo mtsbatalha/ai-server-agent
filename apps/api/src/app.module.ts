@@ -9,6 +9,7 @@ import { SshModule } from './modules/ssh/ssh.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { ChatModule } from './modules/chat/chat.module';
         }),
         PrismaModule,
         EncryptionModule,
+        HealthModule,
         AuthModule,
         UsersModule,
         ServersModule,
@@ -28,3 +30,4 @@ import { ChatModule } from './modules/chat/chat.module';
     ],
 })
 export class AppModule { }
+
