@@ -28,10 +28,20 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
+# Check for docker-compose or docker compose
+if command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+elif docker compose version &> /dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+else
+    echo -e "  ${RED}❌ Docker Compose não encontrado.${NC}"
+    exit 1
+fi
+
 # Start Docker containers
 echo "[1/2] Iniciando containers Docker..."
 cd docker
-docker-compose up -d
+$COMPOSE_CMD up -d
 if [ $? -ne 0 ]; then
     echo -e "  ${RED}❌ Falha ao iniciar containers Docker${NC}"
     echo "  Verifique se o Docker está rodando."
@@ -60,20 +70,17 @@ else
     echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
 fi
 
-# Start the development servers
-echo ""
-echo "[2/2] Iniciando servidores de desenvolvimento..."
-echo ""
-echo "  ⏳ Iniciando Frontend (Next.js) e Backend (NestJS)..."
-echo "  Pressione Ctrl+C para parar os servidores."
 echo ""
 echo "===================================================="
-echo " 📋 URLs disponíveis após inicialização:"
+echo " 📋 URLs disponíveis:"
 echo "----------------------------------------------------"
 echo "  Frontend:   http://localhost:3000"
 echo "  Backend:    http://localhost:3001"
 echo "  API Docs:   http://localhost:3001/api/docs"
 echo "===================================================="
 echo ""
+echo "Visualizando logs (pressione Ctrl+C para sair)..."
+echo ""
 
-pnpm dev
+cd docker
+$COMPOSE_CMD logs -f api web

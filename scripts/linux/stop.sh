@@ -39,11 +39,21 @@ fi
 
 echo -e "  ${GREEN}✅ Servidores Node.js parados${NC}"
 
+# Check for docker-compose or docker compose
+if command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+elif docker compose version &> /dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+else
+    echo -e "  ${RED}❌ Docker Compose não encontrado.${NC}"
+    exit 1
+fi
+
 # Stop Docker containers
 echo ""
 echo "[2/2] Parando containers Docker..."
 cd docker
-docker-compose stop
+$COMPOSE_CMD stop
 if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}✅ Containers Docker parados${NC}"
 else
