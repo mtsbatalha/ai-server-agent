@@ -80,7 +80,7 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document);
 
     // Port configuration with fallback
-    const defaultPort = configService.get<number>('API_PORT', 3001);
+    const defaultPort = parseInt(configService.get('API_PORT', '3001'), 10);
     const enableFallback =
         configService.get('API_PORT_FALLBACK', 'true') === 'true';
 
