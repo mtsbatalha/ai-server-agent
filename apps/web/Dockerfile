@@ -19,6 +19,8 @@ RUN npm install --legacy-peer-deps
 # Set Next.js build environment
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Set API URL for Docker internal network at build time
+ENV NEXT_PUBLIC_API_URL=http://api:3001
 
 # Build
 RUN npm run build
@@ -41,6 +43,8 @@ COPY --from=builder /app/apps/web/public ./public
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# API URL for runtime (used by rewrites in next.config.js)
+ENV NEXT_PUBLIC_API_URL=http://api:3001
 
 # Expose port range for fallback
 EXPOSE 3000-3009
