@@ -41,10 +41,16 @@ fi
 # Start Docker containers
 echo "[1/2] Iniciando containers Docker..."
 cd docker
+
+# First stop any existing containers (without removing volumes)
+$COMPOSE_CMD --env-file ../.env down 2>/dev/null
+
+# Start fresh
 $COMPOSE_CMD --env-file ../.env up -d
 if [ $? -ne 0 ]; then
     echo -e "  ${RED}❌ Falha ao iniciar containers Docker${NC}"
     echo "  Verifique se o Docker está rodando."
+    echo "  Se o problema persistir, execute: ./scripts/linux/reset.sh"
     cd ..
     exit 1
 fi
@@ -53,21 +59,38 @@ echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
 
 # Wait for services to be ready
 echo ""
-echo "Aguardando serviços ficarem prontos..."
-sleep 3
+echo "[2/2] Aguardando serviços ficarem prontos..."
+
+MAX_WAIT=30
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+    if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
+        break
+    fi
+    sleep 2
+    WAITED=$((WAITED + 2))
+done
 
 # Check PostgreSQL
 if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
-    echo -e "  ${GREEN}✅ PostgreSQL pronto (porta 5432)${NC}"
+    echo -e "  ${GREEN}✅ PostgreSQL pronto${NC}"
 else
     echo -e "  ${YELLOW}⚠️  PostgreSQL ainda iniciando...${NC}"
 fi
 
 # Check Redis
 if docker exec ai-server-redis redis-cli ping &> /dev/null; then
-    echo -e "  ${GREEN}✅ Redis pronto (porta 6379)${NC}"
+    echo -e "  ${GREEN}✅ Redis pronto${NC}"
 else
     echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+fi
+
+# Check API
+sleep 3
+if docker ps --filter "name=ai-server-api" --format "{{.Status}}" | grep -q "Up"; then
+    echo -e "  ${GREEN}✅ API rodando${NC}"
+else
+    echo -e "  ${YELLOW}⚠️  API ainda iniciando (aguarde mais alguns segundos)${NC}"
 fi
 
 echo ""
@@ -84,3 +107,4 @@ echo ""
 
 cd docker
 $COMPOSE_CMD --env-file ../.env logs -f api web
+
