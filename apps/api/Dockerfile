@@ -9,9 +9,12 @@ WORKDIR /app
 # Copy all project files
 COPY . .
 
+# Remove any existing node_modules from pnpm
+RUN rm -rf node_modules apps/api/node_modules apps/web/node_modules 2>/dev/null || true
+
 # Install dependencies using npm (avoids pnpm auto-install issues with Prisma)
 WORKDIR /app/apps/api
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps --ignore-scripts
 
 # Generate Prisma Client
 RUN npx prisma generate --schema=../../prisma/schema.prisma
