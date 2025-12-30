@@ -16,13 +16,16 @@ RUN rm -rf node_modules apps/*/node_modules pnpm-lock.yaml pnpm-workspace.yaml .
 WORKDIR /app/apps/web
 RUN npm install --legacy-peer-deps
 
+# Build argument for API port (passed from docker-compose)
+ARG API_PORT=3003
+
 # Set Next.js build environment - NEXT_PUBLIC vars must be set BEFORE build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # API URL for internal Docker communication
 ENV NEXT_PUBLIC_API_URL=http://api:3001
 # API port for browser WebSocket connections (browser uses window.location.hostname + this port)
-ENV NEXT_PUBLIC_API_PORT=3003
+ENV NEXT_PUBLIC_API_PORT=${API_PORT}
 
 # Build
 RUN npm run build
@@ -41,14 +44,17 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
 COPY --from=builder /app/apps/web/public ./public
 
+# Re-declare build arg (ARGs don't carry between stages)
+ARG API_PORT=3003
+
 # Set environment
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 # API URL for internal Docker communication
 ENV NEXT_PUBLIC_API_URL=http://api:3001
-# API port for browser WebSocket connections (browser will use window.location.hostname + this port)
-ENV NEXT_PUBLIC_API_PORT=3003
+# API port for browser WebSocket connections (baked in at build time, this is just for documentation)
+ENV NEXT_PUBLIC_API_PORT=${API_PORT}
 
 # Expose port range for fallback
 EXPOSE 3000-3009

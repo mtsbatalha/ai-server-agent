@@ -96,6 +96,9 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      args:
+        # Pass the API host port so WebSocket connections work correctly
+        API_PORT: ${API_HOST_PORT:-3003}
     container_name: ai-server-web
     environment:
       NODE_ENV: ${NODE_ENV:-production}
