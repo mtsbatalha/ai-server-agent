@@ -205,15 +205,14 @@ fi
 echo -e "  ${GREEN}✅ Dependências instaladas${NC}"
 
 # ============================================
-# [6/7] Configure environment
+# [6/8] Configure environment
 # ============================================
 echo ""
-echo -e "[6/7] Configurando ambiente..."
+echo -e "[6/8] Configurando ambiente..."
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
         echo -e "  ${GREEN}✅ Arquivo .env criado a partir de .env.example${NC}"
-        echo -e "  ${YELLOW}⚠️  IMPORTANTE: Edite o arquivo .env com suas configurações!${NC}"
     else
         echo -e "  ${RED}❌ Arquivo .env.example não encontrado!${NC}"
         exit 1
@@ -222,11 +221,57 @@ else
     echo -e "  ${GREEN}✅ Arquivo .env já existe${NC}"
 fi
 
+# Generate security keys
+echo ""
+echo -e "[7/8] Gerando chaves de segurança..."
+
+# Check if keys already exist and are not placeholders
+CURRENT_JWT=$(grep "^JWT_SECRET" .env 2>/dev/null | head -1 | cut -d'"' -f2)
+CURRENT_ENC=$(grep "^ENCRYPTION_KEY" .env 2>/dev/null | head -1 | cut -d'"' -f2)
+
+NEEDS_JWT=false
+NEEDS_ENC=false
+
+# Check if JWT_SECRET needs to be generated
+if [ -z "$CURRENT_JWT" ] || echo "$CURRENT_JWT" | grep -qiE "your|change|placeholder|example"; then
+    NEEDS_JWT=true
+fi
+
+# Check if ENCRYPTION_KEY needs to be generated
+if [ -z "$CURRENT_ENC" ] || echo "$CURRENT_ENC" | grep -qiE "your|change|placeholder|example"; then
+    NEEDS_ENC=true
+fi
+
+if [ "$NEEDS_JWT" = true ] || [ "$NEEDS_ENC" = true ]; then
+    # Remove any existing/corrupted entries
+    sed -i '/^JWT_SECRET/d' .env
+    sed -i '/^ENCRYPTION_KEY/d' .env
+    sed -i 's/\(API_HOST_PORT=[0-9]*\)JWT_SECRET.*/\1/' .env
+    sed -i 's/\(API_HOST_PORT=[0-9]*\)ENCRYPTION_KEY.*/\1/' .env
+    
+    # Generate new keys
+    NEW_JWT_SECRET=$(openssl rand -base64 32)
+    NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
+    
+    echo "JWT_SECRET=\"${NEW_JWT_SECRET}\"" >> .env
+    echo "ENCRYPTION_KEY=\"${NEW_ENCRYPTION_KEY}\"" >> .env
+    
+    echo -e "  ${GREEN}✅ Chaves de segurança geradas${NC}"
+    echo ""
+    echo -e "  ${BLUE}📋 Suas chaves de segurança:${NC}"
+    echo -e "  JWT_SECRET:     ${NEW_JWT_SECRET}"
+    echo -e "  ENCRYPTION_KEY: ${NEW_ENCRYPTION_KEY}"
+    echo ""
+    echo -e "  ${YELLOW}⚠️  Guarde essas chaves em local seguro!${NC}"
+else
+    echo -e "  ${GREEN}✅ Chaves de segurança já configuradas${NC}"
+fi
+
 # ============================================
-# [7/7] Start Docker containers and configure DB
+# [8/8] Start Docker containers and configure DB
 # ============================================
 echo ""
-echo -e "[7/7] Iniciando containers e configurando banco de dados..."
+echo -e "[8/8] Iniciando containers e configurando banco de dados..."
 
 cd docker
 $COMPOSE_CMD up -d

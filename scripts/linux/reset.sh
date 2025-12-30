@@ -50,7 +50,7 @@ else
 fi
 
 # Kill any rogue local processes
-echo "[1/5] Parando processos locais..."
+echo "[1/7] Parando processos locais..."
 for PORT in 3000 3001 3003 3004; do
     PID=$(lsof -t -i:$PORT 2>/dev/null)
     if [ -n "$PID" ]; then
@@ -62,7 +62,7 @@ echo -e "  ${GREEN}✅ Processos locais parados${NC}"
 
 # Stop and remove containers + volumes
 echo ""
-echo "[2/5] Parando e removendo containers e volumes..."
+echo "[2/7] Parando e removendo containers e volumes..."
 cd docker
 $COMPOSE_CMD --env-file ../.env down -v --remove-orphans
 cd ..
@@ -70,13 +70,47 @@ echo -e "  ${GREEN}✅ Containers e volumes removidos${NC}"
 
 # Remove any orphan volumes
 echo ""
-echo "[3/5] Limpando volumes órfãos..."
+echo "[3/7] Limpando volumes órfãos..."
 docker volume prune -f 2>/dev/null
 echo -e "  ${GREEN}✅ Volumes órfãos removidos${NC}"
 
+# Generate new secrets
+echo ""
+echo "[4/7] Gerando chaves de segurança..."
+
+# Generate new JWT_SECRET
+NEW_JWT_SECRET=$(openssl rand -base64 32)
+# Generate new ENCRYPTION_KEY (32 bytes hex for AES-256)
+NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Update .env file - remove old keys and add new ones
+if [ -f ".env" ]; then
+    # Remove any existing JWT_SECRET and ENCRYPTION_KEY lines
+    sed -i '/^JWT_SECRET/d' .env
+    sed -i '/^ENCRYPTION_KEY/d' .env
+    # Fix any corrupted lines (like API_HOST_PORT=3004JWT_SECRET...)
+    sed -i 's/\(API_HOST_PORT=[0-9]*\)JWT_SECRET.*/\1/' .env
+    sed -i 's/\(API_HOST_PORT=[0-9]*\)ENCRYPTION_KEY.*/\1/' .env
+    
+    # Add new secrets
+    echo "JWT_SECRET=\"${NEW_JWT_SECRET}\"" >> .env
+    echo "ENCRYPTION_KEY=\"${NEW_ENCRYPTION_KEY}\"" >> .env
+    
+    echo -e "  ${GREEN}✅ Chaves geradas e salvas no .env${NC}"
+    echo ""
+    echo -e "  ${CYAN}📋 Suas novas chaves de segurança:${NC}"
+    echo -e "  ${BOLD}JWT_SECRET:${NC}     ${NEW_JWT_SECRET}"
+    echo -e "  ${BOLD}ENCRYPTION_KEY:${NC} ${NEW_ENCRYPTION_KEY}"
+    echo ""
+    echo -e "  ${YELLOW}⚠️  Guarde essas chaves em local seguro!${NC}"
+else
+    echo -e "  ${RED}❌ Arquivo .env não encontrado${NC}"
+    exit 1
+fi
+
 # Start fresh
 echo ""
-echo "[4/5] Iniciando containers do zero..."
+echo "[5/7] Iniciando containers do zero..."
 cd docker
 $COMPOSE_CMD --env-file ../.env up -d
 if [ $? -ne 0 ]; then
@@ -89,7 +123,7 @@ echo -e "  ${GREEN}✅ Containers iniciados${NC}"
 
 # Wait for services
 echo ""
-echo "[5/5] Aguardando serviços ficarem prontos..."
+echo "[6/7] Aguardando serviços ficarem prontos..."
 echo "  (Isso pode levar até 60 segundos na primeira vez)"
 
 MAX_WAIT=60
@@ -123,7 +157,7 @@ if docker ps --filter "name=ai-server-api" --format "{{.Status}}" | grep -q "Up"
     
     # Run Prisma db push to create tables
     echo ""
-    echo "[6/6] Criando tabelas no banco de dados..."
+    echo "[7/7] Criando tabelas no banco de dados..."
     docker exec ai-server-api npx prisma db push --schema=prisma/schema.prisma --skip-generate 2>/dev/null
     if [ $? -eq 0 ]; then
         echo -e "  ${GREEN}✅ Tabelas criadas com sucesso${NC}"
