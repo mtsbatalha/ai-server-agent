@@ -1,6 +1,9 @@
 # Build stage - Install dependencies
 FROM node:20-alpine AS deps
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -18,6 +21,9 @@ RUN pnpm install --frozen-lockfile || pnpm install
 # Builder stage - Build the application
 FROM node:20-alpine AS builder
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -29,14 +35,17 @@ COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 # Copy all source files
 COPY . .
 
-# Generate Prisma Client (using npx directly)
-RUN cd apps/api && npx prisma generate --schema=../../prisma/schema.prisma
+# Generate Prisma Client
+RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Build NestJS
 RUN cd apps/api && pnpm build
 
 # Runner stage - Production image
 FROM node:20-alpine AS runner
+
+# Install OpenSSL for Prisma runtime
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
