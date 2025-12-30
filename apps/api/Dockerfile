@@ -4,26 +4,27 @@ FROM node:20-alpine AS builder
 # Install OpenSSL and libc for Prisma
 RUN apk add --no-cache openssl libc6-compat
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
-# Copy all files first
-COPY . .
+# Copy package files
+COPY package.json ./
+COPY apps/api/package.json ./apps/api/
+COPY prisma ./prisma/
 
-# Install all dependencies
-RUN pnpm install --frozen-lockfile || pnpm install
+# Install dependencies using npm (avoids pnpm auto-install issues with Prisma)
+WORKDIR /app/apps/api
+RUN npm install --legacy-peer-deps
 
 # Generate Prisma Client
-WORKDIR /app/apps/api
+RUN npx prisma generate --schema=../../prisma/schema.prisma
 
-# Ensure @prisma/client is available and generate
-RUN npm install @prisma/client@5.22.0 prisma@5.22.0 --save-dev --legacy-peer-deps 2>/dev/null || true
-RUN ./node_modules/.bin/prisma generate --schema=../../prisma/schema.prisma
+# Copy source code
+COPY apps/api/src ./src
+COPY apps/api/tsconfig*.json ./
+COPY apps/api/nest-cli.json ./
 
 # Build NestJS
-RUN pnpm build
+RUN npm run build
 
 # Runner stage - Production image
 FROM node:20-alpine AS runner
