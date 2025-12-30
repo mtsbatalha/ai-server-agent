@@ -92,7 +92,14 @@ export class ServersService {
 
         const server = await this.prisma.server.create({
             data: {
-                ...encryptedData,
+                name: dto.name,
+                host: dto.host,
+                username: dto.username,
+                authType: dto.authType,
+                description: dto.description,
+                password: encryptedData.password,
+                privateKey: encryptedData.privateKey,
+                passphrase: encryptedData.passphrase,
                 port: dto.port || 22,
                 tags: dto.tags || [],
                 userId,
