@@ -3,22 +3,18 @@ import { useAuthStore } from '@/stores/auth-store';
 
 let socket: Socket | null = null;
 
+// API port for WebSocket connection - must match API_HOST_PORT in docker-compose
+const WS_API_PORT = '3003';
+
 // Get WebSocket URL - must connect directly to API (not via Next.js proxy)
 const getWsUrl = () => {
     if (typeof window !== 'undefined') {
-        // Use explicit WebSocket URL if provided
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-        if (wsUrl) {
-            return wsUrl;
-        }
-        // Fallback: construct from current location (assumes API on same host, different port)
+        // Construct from current location + API port
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname;
-        // Default to port 3001 for API if not specified
-        const apiPort = process.env.NEXT_PUBLIC_API_PORT || '3001';
-        return `${protocol}//${host}:${apiPort}`;
+        return `${protocol}//${host}:${WS_API_PORT}`;
     }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    return 'http://localhost:3003';
 };
 
 export const getSocket = (): Socket => {
