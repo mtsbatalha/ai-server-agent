@@ -9,15 +9,15 @@ WORKDIR /app
 # Copy all project files
 COPY . .
 
-# Remove any existing node_modules from pnpm
-RUN rm -rf node_modules apps/api/node_modules apps/web/node_modules 2>/dev/null || true
+# Remove pnpm files and node_modules to use npm cleanly
+RUN rm -rf node_modules apps/*/node_modules pnpm-lock.yaml pnpm-workspace.yaml .pnpm 2>/dev/null || true
 
-# Install dependencies using npm (avoids pnpm auto-install issues with Prisma)
+# Install dependencies using npm
 WORKDIR /app/apps/api
-RUN npm install --legacy-peer-deps --ignore-scripts
+RUN npm install --legacy-peer-deps
 
-# Generate Prisma Client
-RUN npx prisma generate --schema=../../prisma/schema.prisma
+# Generate Prisma Client using the local binary
+RUN ./node_modules/.bin/prisma generate --schema=../../prisma/schema.prisma
 
 # Build NestJS
 RUN npm run build
