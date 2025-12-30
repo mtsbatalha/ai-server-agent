@@ -35,10 +35,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy built files - standalone output
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
-
-# Copy public folder if it exists
-RUN mkdir -p ./public
-COPY --from=builder /app/apps/web/public* ./public/ 2>/dev/null || true
+COPY --from=builder /app/apps/web/public ./public
 
 # Set environment
 ENV NODE_ENV=production
