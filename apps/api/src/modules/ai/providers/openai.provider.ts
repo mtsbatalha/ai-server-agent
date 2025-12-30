@@ -12,16 +12,34 @@ import { AIProvider, AIMessage, AICompletionOptions } from './ai-provider.interf
 export class OpenAIProvider implements AIProvider {
     name = 'OpenAI';
     private readonly logger = new Logger(OpenAIProvider.name);
-    private client: OpenAI;
+    private client: OpenAI | null = null;
     private model: string;
 
     constructor(private configService: ConfigService) {
         const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-        if (apiKey) {
+        if (apiKey && this.isValidApiKey(apiKey)) {
             this.client = new OpenAI({ apiKey });
             this.model = this.configService.get<string>('OPENAI_MODEL', 'gpt-4o-mini');
             this.logger.log(`OpenAI provider initialized with model: ${this.model}`);
         }
+    }
+
+    /**
+     * Check if API key is valid (not a placeholder)
+     */
+    private isValidApiKey(key: string): boolean {
+        const placeholderPatterns = [
+            'your-',
+            'sk-your',
+            'your_',
+            'placeholder',
+            'example',
+            'xxx',
+            'your-openai',
+            'sk-your-openai',
+        ];
+        const lowerKey = key.toLowerCase();
+        return !placeholderPatterns.some(pattern => lowerKey.includes(pattern));
     }
 
     isConfigured(): boolean {

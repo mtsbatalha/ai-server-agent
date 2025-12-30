@@ -23,12 +23,30 @@ export class GeminiProvider implements AIProvider {
     private baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
     constructor(private configService: ConfigService) {
-        this.apiKey = this.configService.get<string>('GEMINI_API_KEY');
-        this.model = this.configService.get<string>('GEMINI_MODEL', 'gemini-1.5-flash');
-
-        if (this.apiKey) {
+        const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+        if (apiKey && this.isValidApiKey(apiKey)) {
+            this.apiKey = apiKey;
+            this.model = this.configService.get<string>('GEMINI_MODEL', 'gemini-1.5-flash');
             this.logger.log(`Gemini provider initialized with model: ${this.model}`);
+        } else {
+            this.model = this.configService.get<string>('GEMINI_MODEL', 'gemini-1.5-flash');
         }
+    }
+
+    /**
+     * Check if API key is valid (not a placeholder)
+     */
+    private isValidApiKey(key: string): boolean {
+        const placeholderPatterns = [
+            'your-',
+            'your_',
+            'placeholder',
+            'example',
+            'xxx',
+            'your-gemini',
+        ];
+        const lowerKey = key.toLowerCase();
+        return !placeholderPatterns.some(pattern => lowerKey.includes(pattern));
     }
 
     isConfigured(): boolean {
