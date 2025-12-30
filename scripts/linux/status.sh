@@ -82,45 +82,52 @@ else
 fi
 
 # ============================================
-# NODE.JS APPLICATIONS STATUS
+# API & WEB APPLICATIONS STATUS
 # ============================================
 echo ""
 echo "------------------------------------------------------------------------"
-echo -e " ${BOLD}🚀 APLICAÇÕES NODE.JS${NC}"
+echo -e " ${BOLD}🚀 APLICAÇÕES (DOCKER)${NC}"
 echo "------------------------------------------------------------------------"
 echo ""
-printf "   %-22s %-16s %-14s %-10s\n" "Aplicação" "Status" "Porta" "PID"
+printf "   %-22s %-16s %-14s %-10s\n" "Aplicação" "Status" "Porta" "Health"
 printf "   %-22s %-16s %-14s %-10s\n" "--------------------" "--------------" "------------" "--------"
 
-# Check Frontend (port 3000)
+# Check Frontend Container
 WEB_STATUS="${RED}❌ Parado${NC}"
 WEB_PORT="-"
-WEB_PID="-"
+WEB_HEALTH="-"
 
-WEB_PID_VAL=$(lsof -t -i:3000 2>/dev/null | head -1)
-if [ -n "$WEB_PID_VAL" ]; then
+if docker ps --filter "name=ai-server-web" --format "{{.Status}}" 2>/dev/null | grep -q .; then
     WEB_STATUS="${GREEN}✅ Rodando${NC}"
-    WEB_PORT="3000"
-    WEB_PID="$WEB_PID_VAL"
+    # Extract port mapping if possible, or assume env
+    WEB_PORT="${WEB_PORT:-3000}" 
+    if docker inspect --format='{{json .State.Health.Status}}' ai-server-web 2>/dev/null | grep -q "healthy"; then
+        WEB_HEALTH="Healthy"
+    else
+        WEB_HEALTH="Running" 
+    fi
 fi
 
 printf "   %-22s " "Frontend (Next.js)"
-echo -e "$WEB_STATUS      $WEB_PORT          $WEB_PID"
+echo -e "$WEB_STATUS      $WEB_PORT          $WEB_HEALTH"
 
-# Check Backend (port 3001)
+# Check Backend Container
 API_STATUS="${RED}❌ Parado${NC}"
 API_PORT="-"
-API_PID="-"
+API_HEALTH="-"
 
-API_PID_VAL=$(lsof -t -i:3001 2>/dev/null | head -1)
-if [ -n "$API_PID_VAL" ]; then
+if docker ps --filter "name=ai-server-api" --format "{{.Status}}" 2>/dev/null | grep -q .; then
     API_STATUS="${GREEN}✅ Rodando${NC}"
-    API_PORT="3001"
-    API_PID="$API_PID_VAL"
+    API_PORT="${API_PORT:-3001}"
+    if docker inspect --format='{{json .State.Health.Status}}' ai-server-api 2>/dev/null | grep -q "healthy"; then
+        API_HEALTH="Healthy"
+    else
+        API_HEALTH="Running"
+    fi
 fi
 
 printf "   %-22s " "Backend (NestJS)"
-echo -e "$API_STATUS      $API_PORT          $API_PID"
+echo -e "$API_STATUS      $API_PORT          $API_HEALTH"
 
 # ============================================
 # URLS
