@@ -16,11 +16,13 @@ RUN rm -rf node_modules apps/*/node_modules pnpm-lock.yaml pnpm-workspace.yaml .
 WORKDIR /app/apps/web
 RUN npm install --legacy-peer-deps
 
-# Set Next.js build environment
+# Set Next.js build environment - NEXT_PUBLIC vars must be set BEFORE build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# Set API URL for Docker internal network at build time
+# API URL for internal Docker communication
 ENV NEXT_PUBLIC_API_URL=http://api:3001
+# API port for browser WebSocket connections (browser uses window.location.hostname + this port)
+ENV NEXT_PUBLIC_API_PORT=3003
 
 # Build
 RUN npm run build
