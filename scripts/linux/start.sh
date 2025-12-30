@@ -41,7 +41,7 @@ fi
 # Start Docker containers
 echo "[1/2] Iniciando containers Docker..."
 cd docker
-$COMPOSE_CMD up -d
+$COMPOSE_CMD --env-file ../.env up -d
 if [ $? -ne 0 ]; then
     echo -e "  ${RED}❌ Falha ao iniciar containers Docker${NC}"
     echo "  Verifique se o Docker está rodando."
@@ -83,4 +83,4 @@ echo "Visualizando logs (pressione Ctrl+C para sair)..."
 echo ""
 
 cd docker
-$COMPOSE_CMD logs -f api web
+$COMPOSE_CMD --env-file ../.env logs -f api web

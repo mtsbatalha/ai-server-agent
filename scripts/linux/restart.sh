@@ -54,10 +54,10 @@ fi
 echo ""
 echo "[2/3] Reiniciando containers Docker..."
 cd docker
-$COMPOSE_CMD restart
+$COMPOSE_CMD --env-file ../.env restart
 if [ $? -ne 0 ]; then
     echo -e "  ${YELLOW}⚠️  Containers não estavam rodando. Iniciando...${NC}"
-    $COMPOSE_CMD up -d
+    $COMPOSE_CMD --env-file ../.env up -d
 fi
 cd ..
 echo -e "  ${GREEN}✅ Containers Docker reiniciados${NC}"
@@ -94,4 +94,4 @@ echo "Visualizando logs (pressione Ctrl+C para sair)..."
 echo ""
 
 cd docker
-$COMPOSE_CMD logs -f api web
+$COMPOSE_CMD --env-file ../.env logs -f api web

@@ -53,7 +53,7 @@ fi
 echo ""
 echo "[2/2] Parando containers Docker..."
 cd docker
-$COMPOSE_CMD stop
+$COMPOSE_CMD --env-file ../.env stop
 if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}✅ Containers Docker parados${NC}"
 else
