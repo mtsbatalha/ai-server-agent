@@ -1,8 +1,6 @@
 # Development docker-compose with volume mounts
 # Use this for local development with hot reloading
 
-version: '3.8'
-
 services:
   # ===========================================
   # DATABASE (Development)
