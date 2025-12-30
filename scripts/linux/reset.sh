@@ -120,6 +120,16 @@ fi
 sleep 5
 if docker ps --filter "name=ai-server-api" --format "{{.Status}}" | grep -q "Up"; then
     echo -e "  ${GREEN}✅ API rodando${NC}"
+    
+    # Run Prisma db push to create tables
+    echo ""
+    echo "[6/6] Criando tabelas no banco de dados..."
+    docker exec ai-server-api npx prisma db push --schema=prisma/schema.prisma --skip-generate 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  ${GREEN}✅ Tabelas criadas com sucesso${NC}"
+    else
+        echo -e "  ${YELLOW}⚠️  Erro ao criar tabelas (verifique os logs)${NC}"
+    fi
 else
     echo -e "  ${YELLOW}⚠️  API ainda iniciando (verifique logs)${NC}"
 fi
