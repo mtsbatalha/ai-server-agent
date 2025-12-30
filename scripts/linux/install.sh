@@ -188,7 +188,20 @@ echo -e "  ${GREEN}✅ Docker Compose disponível${NC}"
 # ============================================
 echo ""
 echo -e "[5/7] Instalando dependências do projeto..."
+
+# Approve builds for packages that need to run scripts (Prisma, ssh2, etc.)
+echo "  Aprovando build scripts para pacotes necessários..."
+pnpm config set script-shell /bin/bash 2>/dev/null || true
+
+# Install dependencies
 pnpm install
+
+# Approve and reinstall if build scripts were blocked
+if pnpm approve-builds 2>/dev/null; then
+    echo "  Re-instalando com scripts habilitados..."
+    pnpm install
+fi
+
 echo -e "  ${GREEN}✅ Dependências instaladas${NC}"
 
 # ============================================
