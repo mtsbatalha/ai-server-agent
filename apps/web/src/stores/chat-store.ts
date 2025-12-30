@@ -1,5 +1,18 @@
 import { create } from 'zustand';
 
+// Polyfill for crypto.randomUUID (not available in insecure contexts)
+const generateUUID = (): string => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback for insecure contexts (HTTP)
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
+
 export interface Message {
     id: string;
     type: 'user' | 'assistant' | 'system' | 'command' | 'output' | 'error';
@@ -45,7 +58,7 @@ export const useChatStore = create<ChatState>((set) => ({
                 ...state.messages,
                 {
                     ...message,
-                    id: crypto.randomUUID(),
+                    id: generateUUID(),
                     timestamp: new Date(),
                 },
             ],
