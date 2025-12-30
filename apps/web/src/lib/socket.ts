@@ -3,13 +3,23 @@ import { useAuthStore } from '@/stores/auth-store';
 
 let socket: Socket | null = null;
 
+// Get API URL from environment or use relative path for same-origin
+const getApiUrl = () => {
+    // In browser, use relative URL which will be proxied by Next.js
+    if (typeof window !== 'undefined') {
+        return '';  // Empty string = same origin, will use Next.js rewrite
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+};
+
 export const getSocket = (): Socket => {
     if (!socket) {
         const token = useAuthStore.getState().token;
+        const apiUrl = getApiUrl();
 
-        socket = io('http://localhost:3001/chat', {
+        socket = io(`${apiUrl}/chat`, {
             auth: { token },
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
             autoConnect: false,
         });
     }
