@@ -1,4 +1,4 @@
-# Build stage
+# Build stage - Install dependencies
 FROM node:20-alpine AS deps
 
 # Install pnpm
@@ -6,36 +6,36 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy workspace config
+# Copy workspace and lock files
 COPY pnpm-workspace.yaml ./
 COPY package.json ./
+COPY pnpm-lock.yaml* ./
 COPY apps/api/package.json ./apps/api/
-COPY prisma ./prisma/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --ignore-scripts || pnpm install --ignore-scripts
+RUN pnpm install --frozen-lockfile || pnpm install
 
-# Builder stage
+# Builder stage - Build the application
 FROM node:20-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy deps
+# Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 
-# Copy source
+# Copy all source files
 COPY . .
 
-# Generate Prisma Client
-RUN cd apps/api && pnpm prisma:generate
+# Generate Prisma Client (using npx directly)
+RUN cd apps/api && npx prisma generate --schema=../../prisma/schema.prisma
 
-# Build
+# Build NestJS
 RUN cd apps/api && pnpm build
 
-# Runner stage
+# Runner stage - Production image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
@@ -44,7 +44,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
-# Copy built files
+# Copy built application
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
