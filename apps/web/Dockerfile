@@ -46,7 +46,7 @@ ENV HOSTNAME="0.0.0.0"
 # API URL for internal Docker communication
 ENV NEXT_PUBLIC_API_URL=http://api:3001
 # API port for browser WebSocket connections (browser will use window.location.hostname + this port)
-ENV NEXT_PUBLIC_API_PORT=3001
+ENV NEXT_PUBLIC_API_PORT=3003
 
 # Expose port range for fallback
 EXPOSE 3000-3009
