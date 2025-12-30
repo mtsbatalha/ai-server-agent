@@ -24,7 +24,7 @@ Execute tarefas administrativas complexas usando **linguagem natural**. A IA ent
 - Node.js 18+
 - pnpm 8+
 - Docker (para PostgreSQL e Redis)
-- OpenAI API Key
+- OpenAI API Key (ou Gemini/Groq/Ollama grátis!)
 
 ### 1. Clonar e Instalar
 
@@ -41,15 +41,14 @@ cp .env.example .env
 ```
 
 Variáveis importantes:
-- `OPENAI_API_KEY` - Sua chave da OpenAI
+- `OPENAI_API_KEY` - Sua chave da OpenAI (ou use Gemini/Groq/Ollama grátis)
 - `JWT_SECRET` - Chave secreta para tokens JWT
 - `ENCRYPTION_KEY` - Chave de 32+ caracteres para criptografia
 
 ### 3. Iniciar Banco de Dados
 
 ```bash
-cd docker
-docker-compose up -d
+pnpm docker:dev
 ```
 
 ### 4. Configurar Prisma
@@ -68,6 +67,49 @@ pnpm dev
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3001
 - **API Docs**: http://localhost:3001/api/docs
+
+## 🐳 Instalação via Docker (Recomendado)
+
+O projeto pode ser executado totalmente via Docker, incluindo API, Web, PostgreSQL e Redis.
+
+### Instalação Completa (Produção)
+
+```bash
+# 1. Copiar e configurar variáveis de ambiente
+cp .env.example .env
+
+# 2. Build e start de todos os containers
+pnpm docker:build
+pnpm docker:up
+
+# 3. Acompanhar logs
+pnpm docker:logs
+```
+
+### Comandos Docker
+
+| Comando | Descrição |
+|---------|-----------|
+| `pnpm docker:dev` | Inicia apenas Postgres e Redis (para desenvolvimento) |
+| `pnpm docker:dev:down` | Para containers de desenvolvimento |
+| `pnpm docker:build` | Build de todas as imagens |
+| `pnpm docker:up` | Inicia todos os containers (produção) |
+| `pnpm docker:down` | Para todos os containers |
+| `pnpm docker:logs` | Visualiza logs em tempo real |
+| `pnpm docker:ps` | Status dos containers |
+
+### Fallback de Portas
+
+O projeto possui **fallback automático de portas**. Se a porta padrão estiver em uso:
+
+- **API**: Tenta 3001, 3002, 3003... (até 10 tentativas)
+- **Web**: Tenta 3000, 3001, 3002... (até 10 tentativas)
+
+Para usar com fallback de porta em desenvolvimento:
+
+```bash
+pnpm dev:fallback
+```
 
 ## 🛠️ Scripts de Gerenciamento
 

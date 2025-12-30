@@ -4,6 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "next dev -p 3000",
+        "dev:fallback": "node scripts/dev-with-fallback.js",
         "build": "next build",
         "start": "next start",
         "lint": "next lint"
