@@ -43,8 +43,10 @@ COPY --from=builder /app/apps/web/public ./public
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-# API URL for runtime (used by rewrites in next.config.js)
+# API URL for internal Docker communication
 ENV NEXT_PUBLIC_API_URL=http://api:3001
+# API port for browser WebSocket connections (browser will use window.location.hostname + this port)
+ENV NEXT_PUBLIC_API_PORT=3001
 
 # Expose port range for fallback
 EXPOSE 3000-3009
