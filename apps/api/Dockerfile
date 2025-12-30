@@ -15,11 +15,11 @@ COPY . .
 # Install all dependencies
 RUN pnpm install --frozen-lockfile || pnpm install
 
-# Generate Prisma Client
-WORKDIR /app/apps/api
-RUN pnpm prisma:generate
+# Generate Prisma Client using the binary directly (skip npx)
+RUN ./apps/api/node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
 
 # Build NestJS
+WORKDIR /app/apps/api
 RUN pnpm build
 
 # Runner stage - Production image
