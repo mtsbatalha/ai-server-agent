@@ -6,10 +6,8 @@ RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
-COPY apps/api/package.json ./apps/api/
-COPY prisma ./prisma/
+# Copy all project files
+COPY . .
 
 # Install dependencies using npm (avoids pnpm auto-install issues with Prisma)
 WORKDIR /app/apps/api
@@ -17,11 +15,6 @@ RUN npm install --legacy-peer-deps
 
 # Generate Prisma Client
 RUN npx prisma generate --schema=../../prisma/schema.prisma
-
-# Copy source code
-COPY apps/api/src ./src
-COPY apps/api/tsconfig*.json ./
-COPY apps/api/nest-cli.json ./
 
 # Build NestJS
 RUN npm run build
