@@ -126,8 +126,10 @@ services:
 volumes:
   postgres_data:
     driver: local
+    name: ai-server-postgres-data
   redis_data:
     driver: local
+    name: ai-server-redis-data
 
 # ===========================================
 # NETWORKS

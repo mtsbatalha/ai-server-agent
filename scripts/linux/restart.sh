@@ -58,11 +58,30 @@ cd docker
 # Stop containers (without removing volumes to preserve data)
 $COMPOSE_CMD --env-file ../.env down 2>/dev/null
 
+# Clean up conflicting environment variables
+if grep -q "^DATABASE_URL" ../.env 2>/dev/null; then
+    echo -e "  ${YELLOW}⚠️  Removendo DATABASE_URL do .env${NC}"
+    sed -i '/^DATABASE_URL/d' ../.env
+fi
+if grep -q "^REDIS_URL" ../.env 2>/dev/null; then
+    echo -e "  ${YELLOW}⚠️  Removendo REDIS_URL do .env${NC}"
+    sed -i '/^REDIS_URL/d' ../.env
+fi
+
+# Clean up old volumes with wrong names
+OLD_VOLUMES=("docker_postgres_data" "docker_redis_data")
+for vol in "${OLD_VOLUMES[@]}"; do
+    if docker volume ls -q | grep -q "^${vol}$"; then
+        echo -e "  ${YELLOW}⚠️  Removendo volume antigo: $vol${NC}"
+        docker volume rm "$vol" 2>/dev/null || true
+    fi
+done
+
 # Start fresh
 $COMPOSE_CMD --env-file ../.env up -d
 if [ $? -ne 0 ]; then
     echo -e "  ${RED}❌ Falha ao iniciar containers${NC}"
-    echo "  Se o problema persistir, execute: ./scripts/linux/reset.sh"
+    echo "  Se o problema persistir, execute: ./scripts/linux/fix-db.sh"
     cd ..
     exit 1
 fi
