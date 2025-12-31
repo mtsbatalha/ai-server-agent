@@ -72,7 +72,7 @@ export const useServersStore = create<ServersState>((set, get) => ({
         set({ connectionStatus: 'connecting', connectionError: null });
 
         try {
-            await serversApi.testConnection(server.id, 15000);
+            await serversApi.testConnection(server.id, 15);
             set({ connectionStatus: 'connected', connectionError: null });
             get().updateServer(server.id, { status: 'CONNECTED' });
             return true;
