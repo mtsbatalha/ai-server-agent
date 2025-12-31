@@ -160,6 +160,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 client.emit('blocked', {
                     executionId: execution.id,
                     blockedCommands: validation.blockedCommands,
+                    allCommands: commandsResult.commands,
                     reason: validation.reason,
                 });
 
@@ -291,6 +292,68 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         } catch (error) {
             this.logger.error(`Cancel error: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle override of blocked commands
+     * Allows user to execute blocked commands with explicit confirmation
+     */
+    @SubscribeMessage('override')
+    async handleOverride(
+        @MessageBody() data: { executionId: string },
+        @ConnectedSocket() client: AuthenticatedSocket,
+    ) {
+        if (!client.user) {
+            return { error: 'Not authenticated' };
+        }
+
+        const { executionId } = data;
+
+        try {
+            const execution = await this.prisma.execution.findUnique({
+                where: { id: executionId },
+            });
+
+            if (!execution || execution.userId !== client.user.id) {
+                return { error: 'Execution not found' };
+            }
+
+            if (execution.status !== ExecutionStatus.BLOCKED) {
+                return { error: 'Execution is not blocked' };
+            }
+
+            // Log the override action for security audit
+            await this.auditService.log({
+                userId: client.user.id,
+                action: 'EXECUTION_OVERRIDE',
+                resource: 'execution',
+                resourceId: executionId,
+                details: {
+                    commands: execution.commands,
+                    warning: 'User overrode security block to execute potentially dangerous commands'
+                },
+            });
+
+            this.logger.warn(
+                `User ${client.user.email} overrode security block for execution ${executionId}`
+            );
+
+            // Update execution status to awaiting confirmation
+            await this.prisma.execution.update({
+                where: { id: executionId },
+                data: {
+                    status: ExecutionStatus.AWAITING_CONFIRMATION,
+                    riskLevel: RiskLevel.CRITICAL,
+                },
+            });
+
+            // Execute the commands directly
+            await this.executeCommands(executionId, client);
+
+        } catch (error) {
+            this.logger.error(`Override error: ${error.message}`);
+            client.emit('error', { message: error.message });
         }
     }
 

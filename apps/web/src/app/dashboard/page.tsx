@@ -39,6 +39,12 @@ export default function DashboardPage() {
     const [prompt, setPrompt] = useState('');
     const [showAddServer, setShowAddServer] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [blockedExecution, setBlockedExecution] = useState<{
+        executionId: string;
+        blockedCommands: string[];
+        allCommands: string[];
+        reason: string;
+    } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const isConnected = connectionStatus === 'connected';
@@ -122,6 +128,12 @@ export default function DashboardPage() {
                 });
 
                 socket.on('blocked', (data) => {
+                    setBlockedExecution({
+                        executionId: data.executionId,
+                        blockedCommands: data.blockedCommands,
+                        allCommands: data.allCommands || [],
+                        reason: data.reason,
+                    });
                     addMessage({
                         type: 'error',
                         content: `🚫 **Execução bloqueada!**\n\nComandos perigosos detectados:\n${data.blockedCommands.map((c: string) => `- \`${c}\``).join('\n')}\n\n${data.reason}`,
@@ -132,7 +144,7 @@ export default function DashboardPage() {
                 socket.on('complete', (data) => {
                     addMessage({
                         type: 'assistant',
-                        content: `${data.success ? '✅' : '❌'} **Execução ${data.success ? 'concluída!' : 'falhou'}**\n\n${data.analysis.summary}\n\n${data.analysis.details}${data.analysis.nextSteps.length > 0 ? `\n\n**Próximos passos sugeridos:**\n${data.analysis.nextSteps.map((s: string) => `- ${s}`).join('\n')}` : ''}`,
+                        content: `${data.success ? '✅' : '❌'} ** Execução ${data.success ? 'concluída!' : 'falhou'} **\n\n${data.analysis.summary}\n\n${data.analysis.details}${data.analysis.nextSteps.length > 0 ? `\n\n**Próximos passos sugeridos:**\n${data.analysis.nextSteps.map((s: string) => `- ${s}`).join('\n')}` : ''}`,
                     });
                     setExecution(null);
                     setProcessing(false);
@@ -253,7 +265,7 @@ export default function DashboardPage() {
                                     selectServer(server);
                                     clearMessages();
                                 }}
-                                className={`w-full text-left p-2 rounded-lg transition-colors ${selectedServer?.id === server.id
+                                className={`w - full text - left p - 2 rounded - lg transition - colors ${selectedServer?.id === server.id
                                     ? 'bg-primary/20 border border-primary/50'
                                     : 'hover:bg-secondary'
                                     }`}
@@ -263,7 +275,8 @@ export default function DashboardPage() {
                                     <span className="text-sm font-medium truncate">{server.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(server.status)}`}>
+                                    <span className={`text - xs px - 2 py - 0.5 rounded - full border ${getStatusColor(server.status)
+                                        }`}>
                                         {server.status}
                                     </span>
                                 </div>
@@ -309,11 +322,11 @@ export default function DashboardPage() {
                                     <span className="text-sm text-muted-foreground">
                                         {selectedServer.host}:{selectedServer.port}
                                     </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400' :
+                                    <span className={`text - xs px - 2 py - 0.5 rounded - full ${connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400' :
                                         connectionStatus === 'connecting' ? 'bg-yellow-500/20 text-yellow-400' :
                                             connectionStatus === 'error' ? 'bg-red-500/20 text-red-400' :
                                                 'bg-gray-500/20 text-gray-400'
-                                        }`}>
+                                        } `}>
                                         {connectionStatus === 'connected' ? 'Conectado' :
                                             connectionStatus === 'connecting' ? 'Conectando...' :
                                                 connectionStatus === 'error' ? 'Erro' : 'Desconectado'}
@@ -445,6 +458,33 @@ export default function DashboardPage() {
                                 </div>
                             )}
 
+                            {/* Blocked Execution Override UI */}
+                            {blockedExecution && (
+                                <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                                    <span className="text-sm flex-1">Comando bloqueado por segurança. Deseja executar mesmo assim?</span>
+                                    <Button size="sm" variant="outline" onClick={() => setBlockedExecution(null)}>
+                                        <X className="h-4 w-4 mr-1" />
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => {
+                                            const socket = getSocket();
+                                            if (socket && blockedExecution) {
+                                                socket.emit('override', { executionId: blockedExecution.executionId });
+                                                setBlockedExecution(null);
+                                                setProcessing(true);
+                                            }
+                                        }}
+                                    >
+                                        <Play className="h-4 w-4 mr-1" />
+                                        Executar Mesmo Assim
+                                    </Button>
+                                </div>
+                            )}
+
                             <div ref={messagesEndRef} />
                         </div>
                     )}
@@ -523,7 +563,7 @@ function MessageBubble({ message }: { message: Message }) {
     };
 
     return (
-        <div className={`p-4 rounded-lg ${getBgColor()}`}>
+        <div className={`p - 4 rounded - lg ${getBgColor()} `}>
             {getIcon() && (
                 <div className="flex items-center gap-2 mb-2">
                     {getIcon()}
