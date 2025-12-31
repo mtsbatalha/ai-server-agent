@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { serversApi } from '@/lib/api';
 
 export interface Server {
     id: string;
@@ -14,22 +15,31 @@ export interface Server {
     createdAt: string;
 }
 
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
 interface ServersState {
     servers: Server[];
     selectedServer: Server | null;
     isLoading: boolean;
+    connectionStatus: ConnectionStatus;
+    connectionError: string | null;
     setServers: (servers: Server[]) => void;
     addServer: (server: Server) => void;
     updateServer: (id: string, updates: Partial<Server>) => void;
     removeServer: (id: string) => void;
     selectServer: (server: Server | null) => void;
     setLoading: (loading: boolean) => void;
+    connect: () => Promise<boolean>;
+    disconnect: () => void;
+    setConnectionStatus: (status: ConnectionStatus, error?: string) => void;
 }
 
-export const useServersStore = create<ServersState>((set) => ({
+export const useServersStore = create<ServersState>((set, get) => ({
     servers: [],
     selectedServer: null,
     isLoading: false,
+    connectionStatus: 'disconnected',
+    connectionError: null,
     setServers: (servers) => set({ servers }),
     addServer: (server) =>
         set((state) => ({ servers: [server, ...state.servers] })),
@@ -49,6 +59,40 @@ export const useServersStore = create<ServersState>((set) => ({
             selectedServer:
                 state.selectedServer?.id === id ? null : state.selectedServer,
         })),
-    selectServer: (server) => set({ selectedServer: server }),
+    selectServer: (server) => set({
+        selectedServer: server,
+        connectionStatus: 'disconnected',
+        connectionError: null,
+    }),
     setLoading: (isLoading) => set({ isLoading }),
+    connect: async () => {
+        const server = get().selectedServer;
+        if (!server) return false;
+
+        set({ connectionStatus: 'connecting', connectionError: null });
+
+        try {
+            await serversApi.testConnection(server.id, 15000);
+            set({ connectionStatus: 'connected', connectionError: null });
+            get().updateServer(server.id, { status: 'CONNECTED' });
+            return true;
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || 'Falha ao conectar';
+            set({ connectionStatus: 'error', connectionError: errorMsg });
+            get().updateServer(server.id, { status: 'ERROR' });
+            return false;
+        }
+    },
+    disconnect: () => {
+        const server = get().selectedServer;
+        if (server) {
+            get().updateServer(server.id, { status: 'DISCONNECTED' });
+        }
+        set({ connectionStatus: 'disconnected', connectionError: null });
+    },
+    setConnectionStatus: (status, error) => set({
+        connectionStatus: status,
+        connectionError: error || null
+    }),
 }));
+

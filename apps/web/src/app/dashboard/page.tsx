@@ -14,13 +14,18 @@ import {
     AlertTriangle,
     Play,
     X,
+    Plug,
+    Unplug,
+    History,
+    MessageSquarePlus,
+    Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth-store';
-import { useServersStore, Server as ServerType } from '@/stores/servers-store';
-import { useChatStore, Message } from '@/stores/chat-store';
+import { useServersStore, Server as ServerType, ConnectionStatus } from '@/stores/servers-store';
+import { useChatStore, Message, ChatSession } from '@/stores/chat-store';
 import { serversApi } from '@/lib/api';
 import { getSocket, connectSocket, disconnectSocket } from '@/lib/socket';
 
@@ -28,12 +33,16 @@ export default function DashboardPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
-    const { servers, selectedServer, setServers, selectServer, setLoading } = useServersStore();
-    const { messages, currentExecution, isProcessing, addMessage, setExecution, updateExecution, setProcessing, clearMessages } = useChatStore();
+    const { servers, selectedServer, setServers, selectServer, setLoading, connectionStatus, connectionError, connect, disconnect } = useServersStore();
+    const { messages, currentExecution, isProcessing, addMessage, setExecution, updateExecution, setProcessing, clearMessages, sessions, loadSessions, loadSession, saveCurrentSession, deleteSession, startNewSession } = useChatStore();
 
     const [prompt, setPrompt] = useState('');
     const [showAddServer, setShowAddServer] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const isConnected = connectionStatus === 'connected';
+    const isConnecting = connectionStatus === 'connecting';
 
     // Auth check - wait for hydration before checking
     useEffect(() => {
@@ -58,8 +67,9 @@ export default function DashboardPage() {
 
         if (isAuthenticated) {
             loadServers();
+            loadSessions();
         }
-    }, [isAuthenticated, setServers, setLoading]);
+    }, [isAuthenticated, setServers, setLoading, loadSessions]);
 
     // Socket connection
     useEffect(() => {
@@ -294,13 +304,96 @@ export default function DashboardPage() {
                                 {selectedServer ? selectedServer.name : 'Selecione um servidor'}
                             </h1>
                             {selectedServer && (
-                                <p className="text-sm text-muted-foreground">
-                                    {selectedServer.host}:{selectedServer.port}
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm text-muted-foreground">
+                                        {selectedServer.host}:{selectedServer.port}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400' :
+                                            connectionStatus === 'connecting' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                connectionStatus === 'error' ? 'bg-red-500/20 text-red-400' :
+                                                    'bg-gray-500/20 text-gray-400'
+                                        }`}>
+                                        {connectionStatus === 'connected' ? 'Conectado' :
+                                            connectionStatus === 'connecting' ? 'Conectando...' :
+                                                connectionStatus === 'error' ? 'Erro' : 'Desconectado'}
+                                    </span>
+                                </div>
+                            )}
+                            {connectionError && (
+                                <p className="text-sm text-red-400 mt-1">{connectionError}</p>
+                            )}
+                        </div>
+                        {selectedServer && (
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setShowHistory(!showHistory)}
+                                >
+                                    <History className="h-4 w-4 mr-1" />
+                                    Histórico
+                                </Button>
+                                {isConnected ? (
+                                    <Button size="sm" variant="outline" onClick={disconnect}>
+                                        <Unplug className="h-4 w-4 mr-1" />
+                                        Desconectar
+                                    </Button>
+                                ) : (
+                                    <Button size="sm" onClick={connect} disabled={isConnecting}>
+                                        {isConnecting ? (
+                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <Plug className="h-4 w-4 mr-1" />
+                                        )}
+                                        Conectar
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </header>
+
+                {/* History Panel */}
+                {showHistory && selectedServer && (
+                    <div className="border-b border-border p-4 bg-secondary/30">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-medium">Histórico de Conversas</h3>
+                            <Button size="sm" variant="ghost" onClick={startNewSession}>
+                                <MessageSquarePlus className="h-4 w-4 mr-1" />
+                                Nova
+                            </Button>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-auto">
+                            {sessions.filter(s => s.serverId === selectedServer.id).map((session) => (
+                                <div
+                                    key={session.id}
+                                    className="flex items-center justify-between p-2 rounded bg-background hover:bg-secondary cursor-pointer"
+                                    onClick={() => loadSession(session.id)}
+                                >
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm truncate">{session.title || 'Conversa sem título'}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {new Date(session.updatedAt).toLocaleDateString('pt-BR')}
+                                        </p>
+                                    </div>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {sessions.filter(s => s.serverId === selectedServer.id).length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-2">
+                                    Nenhuma conversa salva
                                 </p>
                             )}
                         </div>
                     </div>
-                </header>
+                )}
 
                 {/* Chat Area */}
                 <div className="flex-1 overflow-auto p-4">
@@ -359,16 +452,33 @@ export default function DashboardPage() {
                 {/* Input Area */}
                 {selectedServer && (
                     <div className="p-4 border-t border-border">
+                        {!isConnected && (
+                            <div className="mb-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center">
+                                <p className="text-sm text-yellow-400">
+                                    <Plug className="inline h-4 w-4 mr-1" />
+                                    Conecte-se ao servidor para enviar comandos
+                                </p>
+                            </div>
+                        )}
                         <div className="flex gap-2">
                             <Input
-                                placeholder="Descreva o que você quer fazer..."
+                                placeholder={isConnected ? "Descreva o que você quer fazer..." : "Conecte-se primeiro..."}
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendPrompt()}
-                                disabled={isProcessing}
+                                disabled={!isConnected || isProcessing}
                                 className="flex-1"
                             />
-                            <Button onClick={handleSendPrompt} disabled={!prompt.trim() || isProcessing}>
+                            <Button
+                                onClick={() => {
+                                    handleSendPrompt();
+                                    // Auto-save session after sending message
+                                    if (selectedServer) {
+                                        setTimeout(() => saveCurrentSession(selectedServer.id, selectedServer.name), 1000);
+                                    }
+                                }}
+                                disabled={!isConnected || !prompt.trim() || isProcessing}
+                            >
                                 {isProcessing ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (

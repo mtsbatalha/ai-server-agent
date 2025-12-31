@@ -29,6 +29,7 @@ model User {
   servers       Server[]
   executions    Execution[]
   auditLogs     AuditLog[]
+  chatSessions  ChatSession[]
 
   @@index([email])
   @@map("users")
@@ -178,4 +179,25 @@ model CommandTemplate {
   @@index([category])
   @@index([isPublic])
   @@map("command_templates")
+}
+
+// ============================================
+// CHAT SESSIONS (History)
+// ============================================
+
+model ChatSession {
+  id            String    @id @default(uuid())
+  title         String?
+  messages      Json      // Array of chat messages
+  serverId      String
+  serverName    String    // Denormalized for quick display
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_sessions")
 }

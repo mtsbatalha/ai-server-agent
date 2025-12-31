@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { chatSessionsApi } from '@/lib/api';
 
 // Polyfill for crypto.randomUUID (not available in insecure contexts)
 const generateUUID = (): string => {
@@ -37,21 +38,43 @@ export interface Execution {
     requiresConfirmation?: boolean;
 }
 
+export interface ChatSession {
+    id: string;
+    title: string | null;
+    serverId: string;
+    serverName: string;
+    createdAt: string;
+    updatedAt: string;
+    messages?: Message[];
+}
+
 interface ChatState {
     messages: Message[];
     currentExecution: Execution | null;
     isProcessing: boolean;
+    currentSessionId: string | null;
+    sessions: ChatSession[];
+    sessionsLoading: boolean;
     addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
     clearMessages: () => void;
     setExecution: (execution: Execution | null) => void;
     updateExecution: (updates: Partial<Execution>) => void;
     setProcessing: (processing: boolean) => void;
+    loadSessions: () => Promise<void>;
+    loadSession: (id: string) => Promise<void>;
+    saveCurrentSession: (serverId: string, serverName: string) => Promise<void>;
+    deleteSession: (id: string) => Promise<void>;
+    startNewSession: () => void;
+    setMessages: (messages: Message[]) => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
     messages: [],
     currentExecution: null,
     isProcessing: false,
+    currentSessionId: null,
+    sessions: [],
+    sessionsLoading: false,
     addMessage: (message) =>
         set((state) => ({
             messages: [
@@ -63,7 +86,7 @@ export const useChatStore = create<ChatState>((set) => ({
                 },
             ],
         })),
-    clearMessages: () => set({ messages: [] }),
+    clearMessages: () => set({ messages: [], currentSessionId: null }),
     setExecution: (currentExecution) => set({ currentExecution }),
     updateExecution: (updates) =>
         set((state) => ({
@@ -72,4 +95,73 @@ export const useChatStore = create<ChatState>((set) => ({
                 : null,
         })),
     setProcessing: (isProcessing) => set({ isProcessing }),
+    setMessages: (messages) => set({ messages }),
+    loadSessions: async () => {
+        set({ sessionsLoading: true });
+        try {
+            const response = await chatSessionsApi.getAll();
+            set({ sessions: response.data, sessionsLoading: false });
+        } catch (error) {
+            console.error('Failed to load chat sessions:', error);
+            set({ sessionsLoading: false });
+        }
+    },
+    loadSession: async (id: string) => {
+        try {
+            const response = await chatSessionsApi.getOne(id);
+            if (response.data) {
+                const messages = response.data.messages as Message[];
+                set({
+                    messages,
+                    currentSessionId: id,
+                    currentExecution: null,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load chat session:', error);
+        }
+    },
+    saveCurrentSession: async (serverId: string, serverName: string) => {
+        const { messages, currentSessionId } = get();
+        if (messages.length === 0) return;
+
+        try {
+            if (currentSessionId) {
+                // Update existing session
+                await chatSessionsApi.update(currentSessionId, { messages });
+            } else {
+                // Create new session
+                const response = await chatSessionsApi.create({
+                    messages,
+                    serverId,
+                    serverName,
+                });
+                set({ currentSessionId: response.data.id });
+            }
+            // Refresh sessions list
+            get().loadSessions();
+        } catch (error) {
+            console.error('Failed to save chat session:', error);
+        }
+    },
+    deleteSession: async (id: string) => {
+        try {
+            await chatSessionsApi.delete(id);
+            set((state) => ({
+                sessions: state.sessions.filter(s => s.id !== id),
+                // Clear messages if deleting current session
+                ...(state.currentSessionId === id ? { messages: [], currentSessionId: null } : {}),
+            }));
+        } catch (error) {
+            console.error('Failed to delete chat session:', error);
+        }
+    },
+    startNewSession: () => {
+        set({
+            messages: [],
+            currentSessionId: null,
+            currentExecution: null,
+        });
+    },
 }));
+

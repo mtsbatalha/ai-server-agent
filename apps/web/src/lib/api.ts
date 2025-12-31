@@ -81,4 +81,15 @@ export const auditApi = {
     getAllLogs: (limit?: number) => api.get('/audit', { params: { limit } }),
 };
 
+// Chat Sessions API (History)
+export const chatSessionsApi = {
+    getAll: () => api.get('/chat/sessions'),
+    getOne: (id: string) => api.get(`/chat/sessions/${id}`),
+    create: (data: { title?: string; messages: any[]; serverId: string; serverName: string }) =>
+        api.post('/chat/sessions', data),
+    update: (id: string, data: { title?: string; messages?: any[] }) =>
+        api.put(`/chat/sessions/${id}`, data),
+    delete: (id: string) => api.delete(`/chat/sessions/${id}`),
+};
+
 export default api;
