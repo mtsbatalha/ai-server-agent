@@ -93,7 +93,7 @@ fi
 # Test connection
 echo ""
 echo "Testando conexão..."
-TEST_RESULT=$(docker run --rm --network docker_ai-server-network postgres:16-alpine psql "postgresql://postgres:${POSTGRES_PASS}@postgres:5432/ai_server" -c "SELECT 1" 2>&1)
+TEST_RESULT=$(docker run --rm --network docker_ai-server-network postgres:16-alpine psql "postgresql://postgres:${POSTGRES_PASS}@ai-server-postgres:5432/ai_server" -c "SELECT 1" 2>&1)
 
 if echo "$TEST_RESULT" | grep -q "1 row"; then
     echo -e "${GREEN}✅ Conexão testada com sucesso!${NC}"
