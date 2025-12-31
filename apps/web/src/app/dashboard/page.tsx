@@ -34,7 +34,7 @@ export default function DashboardPage() {
     const { toast } = useToast();
     const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
     const { servers, selectedServer, setServers, selectServer, setLoading, connectionStatus, connectionError, connect, disconnect } = useServersStore();
-    const { messages, currentExecution, isProcessing, addMessage, setExecution, updateExecution, setProcessing, clearMessages, sessions, loadSessions, loadSession, saveCurrentSession, deleteSession, startNewSession } = useChatStore();
+    const { messages, currentExecution, isProcessing, addMessage, setExecution, updateExecution, setProcessing, clearMessages, sessions, loadSessions, loadSession, saveCurrentSession, deleteSession, startNewSession, setCurrentServer, currentServerId, currentServerName } = useChatStore();
 
     const [prompt, setPrompt] = useState('');
     const [showAddServer, setShowAddServer] = useState(false);

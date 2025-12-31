@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { chatSessionsApi } from '@/lib/api';
 
 // Polyfill for crypto.randomUUID (not available in insecure contexts)
@@ -53,6 +54,8 @@ interface ChatState {
     currentExecution: Execution | null;
     isProcessing: boolean;
     currentSessionId: string | null;
+    currentServerId: string | null;
+    currentServerName: string | null;
     sessions: ChatSession[];
     sessionsLoading: boolean;
     addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
@@ -66,102 +69,119 @@ interface ChatState {
     deleteSession: (id: string) => Promise<void>;
     startNewSession: () => void;
     setMessages: (messages: Message[]) => void;
+    setCurrentServer: (serverId: string, serverName: string) => void;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
-    messages: [],
-    currentExecution: null,
-    isProcessing: false,
-    currentSessionId: null,
-    sessions: [],
-    sessionsLoading: false,
-    addMessage: (message) =>
-        set((state) => ({
-            messages: [
-                ...state.messages,
-                {
-                    ...message,
-                    id: generateUUID(),
-                    timestamp: new Date(),
-                },
-            ],
-        })),
-    clearMessages: () => set({ messages: [], currentSessionId: null }),
-    setExecution: (currentExecution) => set({ currentExecution }),
-    updateExecution: (updates) =>
-        set((state) => ({
-            currentExecution: state.currentExecution
-                ? { ...state.currentExecution, ...updates }
-                : null,
-        })),
-    setProcessing: (isProcessing) => set({ isProcessing }),
-    setMessages: (messages) => set({ messages }),
-    loadSessions: async () => {
-        set({ sessionsLoading: true });
-        try {
-            const response = await chatSessionsApi.getAll();
-            set({ sessions: response.data, sessionsLoading: false });
-        } catch (error) {
-            console.error('Failed to load chat sessions:', error);
-            set({ sessionsLoading: false });
-        }
-    },
-    loadSession: async (id: string) => {
-        try {
-            const response = await chatSessionsApi.getOne(id);
-            if (response.data) {
-                const messages = response.data.messages as Message[];
+export const useChatStore = create<ChatState>()(
+    persist(
+        (set, get) => ({
+            messages: [],
+            currentExecution: null,
+            isProcessing: false,
+            currentSessionId: null,
+            currentServerId: null,
+            currentServerName: null,
+            sessions: [],
+            sessionsLoading: false,
+            addMessage: (message) =>
+                set((state) => ({
+                    messages: [
+                        ...state.messages,
+                        {
+                            ...message,
+                            id: generateUUID(),
+                            timestamp: new Date(),
+                        },
+                    ],
+                })),
+            clearMessages: () => set({ messages: [], currentSessionId: null }),
+            setExecution: (currentExecution) => set({ currentExecution }),
+            updateExecution: (updates) =>
+                set((state) => ({
+                    currentExecution: state.currentExecution
+                        ? { ...state.currentExecution, ...updates }
+                        : null,
+                })),
+            setProcessing: (isProcessing) => set({ isProcessing }),
+            setMessages: (messages) => set({ messages }),
+            setCurrentServer: (serverId, serverName) => set({ currentServerId: serverId, currentServerName: serverName }),
+            loadSessions: async () => {
+                set({ sessionsLoading: true });
+                try {
+                    const response = await chatSessionsApi.getAll();
+                    set({ sessions: response.data, sessionsLoading: false });
+                } catch (error) {
+                    console.error('Failed to load chat sessions:', error);
+                    set({ sessionsLoading: false });
+                }
+            },
+            loadSession: async (id: string) => {
+                try {
+                    const response = await chatSessionsApi.getOne(id);
+                    if (response.data) {
+                        const messages = response.data.messages as Message[];
+                        set({
+                            messages,
+                            currentSessionId: id,
+                            currentExecution: null,
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load chat session:', error);
+                }
+            },
+            saveCurrentSession: async (serverId: string, serverName: string) => {
+                const { messages, currentSessionId } = get();
+                if (messages.length === 0) return;
+
+                try {
+                    if (currentSessionId) {
+                        // Update existing session
+                        await chatSessionsApi.update(currentSessionId, { messages });
+                    } else {
+                        // Create new session
+                        const response = await chatSessionsApi.create({
+                            messages,
+                            serverId,
+                            serverName,
+                        });
+                        set({ currentSessionId: response.data.id });
+                    }
+                    // Refresh sessions list
+                    get().loadSessions();
+                } catch (error) {
+                    console.error('Failed to save chat session:', error);
+                }
+            },
+            deleteSession: async (id: string) => {
+                try {
+                    await chatSessionsApi.delete(id);
+                    set((state) => ({
+                        sessions: state.sessions.filter(s => s.id !== id),
+                        // Clear messages if deleting current session
+                        ...(state.currentSessionId === id ? { messages: [], currentSessionId: null } : {}),
+                    }));
+                } catch (error) {
+                    console.error('Failed to delete chat session:', error);
+                }
+            },
+            startNewSession: () => {
                 set({
-                    messages,
-                    currentSessionId: id,
+                    messages: [],
+                    currentSessionId: null,
                     currentExecution: null,
                 });
-            }
-        } catch (error) {
-            console.error('Failed to load chat session:', error);
+            },
+        }),
+        {
+            name: 'chat-storage',
+            partialize: (state) => ({
+                messages: state.messages,
+                currentSessionId: state.currentSessionId,
+                currentServerId: state.currentServerId,
+                currentServerName: state.currentServerName,
+            }),
         }
-    },
-    saveCurrentSession: async (serverId: string, serverName: string) => {
-        const { messages, currentSessionId } = get();
-        if (messages.length === 0) return;
-
-        try {
-            if (currentSessionId) {
-                // Update existing session
-                await chatSessionsApi.update(currentSessionId, { messages });
-            } else {
-                // Create new session
-                const response = await chatSessionsApi.create({
-                    messages,
-                    serverId,
-                    serverName,
-                });
-                set({ currentSessionId: response.data.id });
-            }
-            // Refresh sessions list
-            get().loadSessions();
-        } catch (error) {
-            console.error('Failed to save chat session:', error);
-        }
-    },
-    deleteSession: async (id: string) => {
-        try {
-            await chatSessionsApi.delete(id);
-            set((state) => ({
-                sessions: state.sessions.filter(s => s.id !== id),
-                // Clear messages if deleting current session
-                ...(state.currentSessionId === id ? { messages: [], currentSessionId: null } : {}),
-            }));
-        } catch (error) {
-            console.error('Failed to delete chat session:', error);
-        }
-    },
-    startNewSession: () => {
-        set({
-            messages: [],
-            currentSessionId: null,
-            currentExecution: null,
-        });
-    },
-}));
+    )
+);
 
