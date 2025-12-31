@@ -27,7 +27,7 @@ import { getSocket, connectSocket, disconnectSocket } from '@/lib/socket';
 export default function DashboardPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const { user, isAuthenticated, logout } = useAuthStore();
+    const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
     const { servers, selectedServer, setServers, selectServer, setLoading } = useServersStore();
     const { messages, currentExecution, isProcessing, addMessage, setExecution, updateExecution, setProcessing, clearMessages } = useChatStore();
 
@@ -35,12 +35,12 @@ export default function DashboardPage() {
     const [showAddServer, setShowAddServer] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Auth check
+    // Auth check - wait for hydration before checking
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (hasHydrated && !isAuthenticated) {
             router.push('/login');
         }
-    }, [isAuthenticated, router]);
+    }, [hasHydrated, isAuthenticated, router]);
 
     // Load servers
     useEffect(() => {
@@ -243,8 +243,8 @@ export default function DashboardPage() {
                                     clearMessages();
                                 }}
                                 className={`w-full text-left p-2 rounded-lg transition-colors ${selectedServer?.id === server.id
-                                        ? 'bg-primary/20 border border-primary/50'
-                                        : 'hover:bg-secondary'
+                                    ? 'bg-primary/20 border border-primary/50'
+                                    : 'hover:bg-secondary'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
