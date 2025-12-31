@@ -83,8 +83,11 @@ NEW_JWT_SECRET=$(openssl rand -base64 32)
 # Generate new ENCRYPTION_KEY (32 bytes hex for AES-256)
 NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-# Update .env file - remove old keys and add new ones
+# Update .env file - remove conflicting entries and add new secrets
 if [ -f ".env" ]; then
+    # Remove DATABASE_URL and REDIS_URL (Docker generates these automatically from POSTGRES_* vars)
+    sed -i '/^DATABASE_URL/d' .env
+    sed -i '/^REDIS_URL/d' .env
     # Remove any existing JWT_SECRET and ENCRYPTION_KEY lines
     sed -i '/^JWT_SECRET/d' .env
     sed -i '/^ENCRYPTION_KEY/d' .env

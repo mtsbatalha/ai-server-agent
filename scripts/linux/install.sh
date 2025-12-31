@@ -243,6 +243,9 @@ if [ -z "$CURRENT_ENC" ] || echo "$CURRENT_ENC" | grep -qiE "your|change|placeho
 fi
 
 if [ "$NEEDS_JWT" = true ] || [ "$NEEDS_ENC" = true ]; then
+    # Remove DATABASE_URL and REDIS_URL (Docker generates these automatically from POSTGRES_* vars)
+    sed -i '/^DATABASE_URL/d' .env
+    sed -i '/^REDIS_URL/d' .env
     # Remove any existing/corrupted entries
     sed -i '/^JWT_SECRET/d' .env
     sed -i '/^ENCRYPTION_KEY/d' .env
