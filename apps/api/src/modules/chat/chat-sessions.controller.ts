@@ -9,7 +9,7 @@ import {
     UseGuards,
     Request,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '@/modules/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { ChatSessionsService } from './chat-sessions.service';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
