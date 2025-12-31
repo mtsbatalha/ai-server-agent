@@ -105,6 +105,14 @@ done
 # Check PostgreSQL
 if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
     echo -e "  ${GREEN}✅ PostgreSQL pronto${NC}"
+    
+    # Sync password from .env to running PostgreSQL
+    # This fixes the issue where volume was created with different password
+    POSTGRES_PASS=$(grep "^POSTGRES_PASSWORD" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    if [ -n "$POSTGRES_PASS" ]; then
+        docker exec ai-server-postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD '${POSTGRES_PASS}';" &>/dev/null
+        echo -e "  ${GREEN}✅ Senha do PostgreSQL sincronizada${NC}"
+    fi
 else
     echo -e "  ${YELLOW}⚠️  PostgreSQL ainda iniciando...${NC}"
 fi
