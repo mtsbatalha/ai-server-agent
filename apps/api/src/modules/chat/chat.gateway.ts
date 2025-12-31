@@ -123,9 +123,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             // Emit status update
             client.emit('status', { executionId: execution.id, status: 'PLANNING', message: 'Analisando solicitação...' });
 
-            // Get server info
+            // Get server info and detect distro
             const server = await this.serversService.findOne(serverId, userId, userRole);
-            const serverInfo = `Host: ${server.host}, OS: Debian/Ubuntu`;
+            const credentials = await this.serversService.getDecryptedCredentials(serverId, userId, userRole);
+            const distro = await this.detectDistro(serverId, credentials);
+            const serverInfo = `Host: ${server.host}, OS: ${distro}`;
 
             // Step 1: Create plan
             const plan = await this.aiService.createPlan(prompt, serverInfo);
@@ -139,7 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('status', { executionId: execution.id, status: 'VALIDATING', message: 'Gerando comandos...' });
 
             // Step 2: Generate commands
-            const commandsResult = await this.aiService.generateCommands(prompt, plan);
+            const commandsResult = await this.aiService.generateCommands(prompt, plan, distro);
 
             // Step 3: Validate commands
             const validation = this.commandValidator.validateCommands(commandsResult.commands);
@@ -420,6 +422,62 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         } catch (error) {
             client.emit('error', { message: error.message });
+        }
+    }
+
+    /**
+     * Detect the Linux distribution of a server
+     */
+    private async detectDistro(serverId: string, credentials: any): Promise<string> {
+        try {
+            // Try to detect distro using various methods
+            const result = await this.sshService.executeCommand(
+                serverId,
+                'cat /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || cat /etc/alpine-release 2>/dev/null || uname -a',
+                credentials,
+            );
+
+            if (!result.success || !result.stdout) {
+                return 'Linux (unknown)';
+            }
+
+            const output = result.stdout.toLowerCase();
+
+            // Detect specific distributions
+            if (output.includes('alpine')) {
+                return 'Alpine Linux';
+            } else if (output.includes('ubuntu')) {
+                return 'Ubuntu';
+            } else if (output.includes('debian')) {
+                return 'Debian';
+            } else if (output.includes('centos')) {
+                return 'CentOS';
+            } else if (output.includes('rocky')) {
+                return 'Rocky Linux';
+            } else if (output.includes('alma')) {
+                return 'AlmaLinux';
+            } else if (output.includes('fedora')) {
+                return 'Fedora';
+            } else if (output.includes('rhel') || output.includes('red hat')) {
+                return 'RHEL';
+            } else if (output.includes('arch')) {
+                return 'Arch Linux';
+            } else if (output.includes('opensuse') || output.includes('suse')) {
+                return 'openSUSE';
+            } else if (output.includes('amazon')) {
+                return 'Amazon Linux';
+            }
+
+            // Extract from PRETTY_NAME if available
+            const prettyNameMatch = output.match(/pretty_name="?([^"\n]+)"?/i);
+            if (prettyNameMatch) {
+                return prettyNameMatch[1].trim();
+            }
+
+            return 'Linux (unknown)';
+        } catch (error) {
+            this.logger.warn(`Failed to detect distro: ${error.message}`);
+            return 'Linux (unknown)';
         }
     }
 }
