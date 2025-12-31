@@ -81,7 +81,7 @@ export default function DashboardPage() {
                 const socket = getSocket();
 
                 socket.on('status', (data) => {
-                    updateExecution({ status: data.status });
+                    updateExecution({ id: data.executionId, status: data.status });
                     addMessage({
                         type: 'system',
                         content: `📊 ${data.message}`,
@@ -89,7 +89,7 @@ export default function DashboardPage() {
                 });
 
                 socket.on('plan', (data) => {
-                    updateExecution({ plan: data.plan });
+                    updateExecution({ id: data.executionId, plan: data.plan });
                     addMessage({
                         type: 'assistant',
                         content: `📋 **Plano de Execução**\n\n**Objetivo:** ${data.plan.objective}\n\n**Passos:**\n${data.plan.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}\n\n**Riscos:** ${data.plan.risks.join(', ') || 'Nenhum identificado'}\n\n**Tempo estimado:** ${data.plan.estimatedTime}`,
@@ -98,6 +98,7 @@ export default function DashboardPage() {
 
                 socket.on('commands', (data) => {
                     updateExecution({
+                        id: data.executionId,
                         commands: data.commands,
                         riskLevel: data.riskLevel,
                         requiresConfirmation: data.requiresConfirmation,
@@ -309,9 +310,9 @@ export default function DashboardPage() {
                                         {selectedServer.host}:{selectedServer.port}
                                     </span>
                                     <span className={`text-xs px-2 py-0.5 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400' :
-                                            connectionStatus === 'connecting' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                connectionStatus === 'error' ? 'bg-red-500/20 text-red-400' :
-                                                    'bg-gray-500/20 text-gray-400'
+                                        connectionStatus === 'connecting' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            connectionStatus === 'error' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-gray-500/20 text-gray-400'
                                         }`}>
                                         {connectionStatus === 'connected' ? 'Conectado' :
                                             connectionStatus === 'connecting' ? 'Conectando...' :
