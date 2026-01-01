@@ -38,6 +38,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x ./docker-entrypoint.sh
 
 # Set environment
 ENV NODE_ENV=production
@@ -49,7 +53,9 @@ EXPOSE 3001-3010
 USER nestjs
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${API_PORT}/api/health || exit 1
 
-CMD ["node", "dist/main.js"]
+# Use entrypoint script to run migrations before starting
+ENTRYPOINT ["./docker-entrypoint.sh"]
+
