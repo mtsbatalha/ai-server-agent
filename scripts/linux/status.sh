@@ -50,7 +50,7 @@ else
 
         if docker ps --filter "name=ai-server-postgres" --format "{{.Status}}" 2>/dev/null | grep -q .; then
             PG_STATUS="${GREEN}✅ Rodando${NC}"
-            PG_PORT="5432"
+            PG_PORT="5433"
             if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
                 PG_HEALTH="Healthy"
             else
@@ -68,7 +68,7 @@ else
 
         if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
             REDIS_STATUS="${GREEN}✅ Rodando${NC}"
-            REDIS_PORT="6379"
+            REDIS_PORT="6380"
             if docker exec ai-server-redis redis-cli ping &> /dev/null; then
                 REDIS_HEALTH="Healthy"
             else

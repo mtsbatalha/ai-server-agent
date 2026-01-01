@@ -48,7 +48,7 @@ set PG_HEALTH=-
 for /f "tokens=*" %%a in ('docker ps --filter "name=ai-server-postgres" --format "{{.Status}}" 2^>nul') do (
     set "PG_FULL_STATUS=%%a"
     set PG_STATUS=✅ Rodando
-    set PG_PORT=5432
+    set PG_PORT=5433
 )
 
 if "!PG_STATUS!"=="✅ Rodando" (
@@ -70,7 +70,7 @@ set REDIS_HEALTH=-
 for /f "tokens=*" %%a in ('docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2^>nul') do (
     set "REDIS_FULL_STATUS=%%a"
     set REDIS_STATUS=✅ Rodando
-    set REDIS_PORT=6379
+    set REDIS_PORT=6380
 )
 
 if "!REDIS_STATUS!"=="✅ Rodando" (

@@ -123,6 +123,7 @@ Scripts para facilitar o gerenciamento do projeto, disponíveis para Windows e L
 | `restart` | Reinicia todos os serviços |
 | `status` | Mostra status detalhado dos serviços, portas, PIDs e logs |
 | `logs` | Visualizador interativo de logs dos containers |
+| `uninstall` | Remove completamente o projeto (containers, volumes, node_modules) |
 
 ### Windows
 

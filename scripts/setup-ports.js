@@ -11,8 +11,8 @@ const ENV_EXAMPLE_FILE = path.join(PROJECT_ROOT, '.env.example');
 const DEFAULT_PORTS = {
     WEB: 3000,
     API: 3003, // Changed default to 3003
-    POSTGRES: 5432,
-    REDIS: 6379,
+    POSTGRES: 5433, // Non-default to avoid conflict with other projects (e.g., Grammarly)
+    REDIS: 6380, // Non-default to avoid conflict with other projects (e.g., Grammarly)
     OLLAMA: 11434
 };
 

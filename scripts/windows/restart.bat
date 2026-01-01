@@ -52,7 +52,7 @@ timeout /t 3 /nobreak >nul
 :: Check PostgreSQL
 docker exec ai-server-postgres pg_isready -U postgres >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo   ✅ PostgreSQL pronto (porta 5432)
+    echo   ✅ PostgreSQL pronto (porta 5433)
 ) else (
     echo   ⚠️  PostgreSQL ainda iniciando...
 )
@@ -60,7 +60,7 @@ if %ERRORLEVEL% EQU 0 (
 :: Check Redis
 docker exec ai-server-redis redis-cli ping >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo   ✅ Redis pronto (porta 6379)
+    echo   ✅ Redis pronto (porta 6380)
 ) else (
     echo   ⚠️  Redis ainda iniciando...
 )
