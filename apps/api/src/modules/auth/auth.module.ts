@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { getOrGenerateSecret } from '../../common/config/secrets.helper';
 
 @Module({
     imports: [
@@ -15,7 +16,7 @@ import { RolesGuard } from './guards/roles.guard';
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET'),
+                secret: getOrGenerateSecret(configService, 'JWT_SECRET'),
                 signOptions: {
                     expiresIn: configService.get<string>('JWT_EXPIRES_IN', '7d'),
                 },

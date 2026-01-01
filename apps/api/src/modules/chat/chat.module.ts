@@ -8,13 +8,14 @@ import { ChatSessionsService } from './chat-sessions.service';
 import { AiModule } from '../ai/ai.module';
 import { SshModule } from '../ssh/ssh.module';
 import { ServersModule } from '../servers/servers.module';
+import { getOrGenerateSecret } from '../../common/config/secrets.helper';
 
 @Module({
     imports: [
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET'),
+                secret: getOrGenerateSecret(configService, 'JWT_SECRET'),
             }),
             inject: [ConfigService],
         }),

@@ -18,6 +18,7 @@ import { CommandValidatorService } from '../ssh/command-validator.service';
 import { ServersService } from '../servers/servers.service';
 import { AuditService } from '../audit/audit.service';
 import { ExecutionStatus, RiskLevel, Role } from '@prisma/client';
+import { getOrGenerateSecret } from '../../common/config/secrets.helper';
 
 interface AuthenticatedSocket extends Socket {
     user?: {
@@ -71,7 +72,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
 
             const payload = this.jwtService.verify(token, {
-                secret: this.configService.get<string>('JWT_SECRET'),
+                secret: getOrGenerateSecret(this.configService, 'JWT_SECRET'),
             });
 
             client.user = {
