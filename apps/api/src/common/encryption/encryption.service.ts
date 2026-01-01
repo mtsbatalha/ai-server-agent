@@ -8,10 +8,22 @@ export class EncryptionService {
     private readonly key: Buffer;
 
     constructor(private configService: ConfigService) {
-        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+        let encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+
         if (!encryptionKey || encryptionKey.length < 32) {
-            throw new Error('ENCRYPTION_KEY must be at least 32 characters');
+            // Auto-generate a secure encryption key
+            encryptionKey = crypto.randomBytes(32).toString('hex');
+            console.log('\n' + '='.repeat(70));
+            console.log('⚠️  ENCRYPTION_KEY was missing or invalid (< 32 chars)');
+            console.log('🔐 A new ENCRYPTION_KEY has been auto-generated:');
+            console.log('');
+            console.log(`   ENCRYPTION_KEY="${encryptionKey}"`);
+            console.log('');
+            console.log('📋 Please add this to your .env file to persist it!');
+            console.log('   Without this, encrypted data will be lost on restart.');
+            console.log('='.repeat(70) + '\n');
         }
+
         this.key = crypto.scryptSync(encryptionKey, 'salt', 32);
     }
 
