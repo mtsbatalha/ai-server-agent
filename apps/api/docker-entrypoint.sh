@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "🔄 Running Prisma migrations..."
-npx prisma migrate deploy --schema=/app/prisma/schema.prisma
+echo "🔄 Syncing database schema with Prisma..."
+npx prisma db push --schema=/app/prisma/schema.prisma --accept-data-loss
 
-echo "✅ Migrations complete. Starting API..."
+echo "✅ Database sync complete. Starting API..."
 exec node dist/main.js
